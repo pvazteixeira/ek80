@@ -1,9 +1,8 @@
-# ----------------------------------------------------------------------------
-#    Method       EK80 generic v1.0
-#    Description  Subscribes to EK80 data depending on the config.xml file and report data.
-#                 Comunicate with the EK80/EK60/EK15
-#    By:          Kongsberg Maritime AS, Terje Nilsen 2020
-#-----------------------------------------------------------------------------
+"""EK80 data client
+
+Author: Terje Nilsen, Kongsberg Maritime AS
+"""
+
 import socket
 import time
 import datetime
@@ -25,17 +24,15 @@ logging.basicConfig(level=logging.DEBUG)
 # If you start to get lost messages, disable debug and retest.
 # If this helps, then remove some output messages in the EK80_data function.
 # The EK80_data function is time critical...
-#-------------------------------------------------------------------------------
-# BELOW THIS LINE SHOULD NORMALLY NOOT NEED CHANGES::::::
-#-------------------------------------------------------------------------------
 
 def bytes_to_int(bs):
-    """
-    Convert a byte string to int(16)
+    """Convert a byte string to int(16)
     """
     return int(bs[0]) + int(bs[1]*256)
 
 class t9ek80:
+    """
+    """
 #----------------------------------------------------------------------------
 #   Method       report
 #   Description  User defined REPORT function, this is to be adapter to individual needs.
@@ -85,6 +82,8 @@ class t9ek80:
         self.cont = False
 
         self.debug = self.getDebug()
+
+        #FIXME: the code below should be moved to a load_config() method
 
         # Get extra parameters...
         if len(argv) == 3:
@@ -152,14 +151,14 @@ class t9ek80:
         return False
 
     # Do the reporting stuff...
-    def report(Payload, Decode, timenow, mtype, desimate):
-        """
+    def report(Payload, Decode, timenow, mtype, decimate):
+        """Incoming data handler (to be overridden by user in derived class)
         """
         logging.warning("Missing interface module...")
 
 
     def NMEAdecode(self, data):
-        """
+        """NMEA data handler (to be overridden by user in derived class)
         """
         logging.warning("Missing NMEA interface module...")
 
@@ -170,8 +169,7 @@ class t9ek80:
     #                 Can create og change a subscription...
     #-----------------------------------------------------------------------------
     def subscribe(self, sock, ApplicationID, transponder, create):
-        """
-        Create or change a data subscription
+        """Create or change a data subscription
         """
         self.EK_req = self.EK_req.replace("?", transponder)
         logging.debug(self.EK_req)
@@ -202,7 +200,7 @@ class t9ek80:
             "<time>0</time>" \
             "</GetParameter>" \
             "</method>" \
-            "</request>\0".format(ApplicationID,self.client_seq_no,parameter_name)
+            "</request>\0".format(ApplicationID, self.client_seq_no, parameter_name)
         request = tmp + tmp2
 
         # Send the request and increase the sequence number
@@ -233,13 +231,13 @@ class t9ek80:
             "<time>0</time>" \
             "</SetParameter>" \
             "</method>" \
-            "</request>\0".format(ApplicationID,self.client_seq_no,parameter_name,parameter_value,parameter_type)
+            "</request>\0".format(ApplicationID, self.client_seq_no, parameter_name, parameter_value, parameter_type)
         request = tmp + tmp2
 
         # Send the request and increase the sequence number
-        request = bytes(request,encoding='utf-8')
+        request = bytes(request, encoding='utf-8')
         sock.send(request)
-        self.client_seq_no=self.client_seq_no + 1
+        self.client_seq_no = self.client_seq_no + 1
 
     def CreateSubscription(self, sock, ApplicationID, port, parameter_name):
         """
@@ -260,13 +258,13 @@ class t9ek80:
             "<dataRequest>{:s}</dataRequest>" \
             "</Subscribe>" \
             "</method>" \
-            "</request>\0".format(ApplicationID,self.client_seq_no,port,parameter_name)
+            "</request>\0".format(ApplicationID, self.client_seq_no, port, parameter_name)
         request = tmp + tmp2
 
         # Send the request and increase the sequence number
-        request = bytes(request,encoding='utf-8')
+        request = bytes(request, encoding='utf-8')
         sock.send(request)
-        self.client_seq_no=self.client_seq_no + 1
+        self.client_seq_no = self.client_seq_no + 1
 
     #----------------------------------------------------------------------------
     #    Method       ChangeSubscription
@@ -288,7 +286,7 @@ class t9ek80:
             "<dataRequest>{:s}</dataRequest>" \
             "</ChangeSubscription>>" \
             "</method>" \
-            "</request>\0".format(ApplicationID,self.client_seq_no,ApplicationID,parameter_name)
+            "</request>\0".format(ApplicationID, self.client_seq_no,ApplicationID,parameter_name)
         request = tmp + tmp2
 
         # Send the request and increase the sequence number
@@ -325,8 +323,6 @@ class t9ek80:
                             data3 = data2.split()
                             ApplicationID = int(data3[1].decode())
                             logging.debug("Get Param")
-                            if self.debug == True:
-                                print("Get Param")
                             self.GetParameterValue(sock,ApplicationID, "", "TransceiverMgr/Channels" )
 
                         else: # If failed the retry...
@@ -390,7 +386,7 @@ class t9ek80:
                     sock.send(msg)  # Send connect...
                     # logging.debug('.')
                 elif data[:3] == b'RTR':
-                    logging.debug("RTR received: {}".format(data))
+                    logging.debug("RTR received: %s", data)
                 elif data[:3] == b'REQ':
                     logging.debug("REQ received")
                 elif data[:3] == b'PRD':
@@ -431,7 +427,7 @@ class t9ek80:
         datasock.bind(("0.0.0.0", self.UDP_DATA))
         self.UDP_DATA = datasock.getsockname()[1]
         datasock.settimeout(5.0)
-        print('EK80data listening on port:', self.UDP_DATA)
+        logging.info('EK80data listening on port: %d', self.UDP_DATA)
         self.running = self.running | self.Status_Data
 
         # Data can in some case be received in frame sets, we then need to make sure that we start with the first frame in the set.
@@ -463,7 +459,7 @@ class t9ek80:
                         print("NoOfBytes:  {:d}".format(Decode[5]))
 
                     if self.itypeSize > 0:
-                        tmp = unpack("<Q"+self.mtypeName,self.finale_data[0:10])
+                        tmp = unpack("<Q"+self.mtypeName, self.finale_data[0:10])
                         timenow = datetime.datetime.utcfromtimestamp((tmp[0]/10000000)- 11644473600).strftime('%Y-%m-%dT%H:%M:%SZ')
 
                         self.finale_data = self.finale_data[10:]
@@ -555,7 +551,7 @@ class t9ek80:
         try:
             data = sock.recv(8000)
         except socket.timeout:
-            print ("No Equipment found, make shure the IP:port is set to: {:s}:{:d}".format(self.UDP_IP,self.UDP_PORT))
+            print ("No Equipment found, make shure the IP:port is set to: {:s}:{:d}".format(self.UDP_IP, self.UDP_PORT))
             sock.close()
             return
 
@@ -614,4 +610,3 @@ class t9ek80:
                 time.sleep(1)
 
         time.sleep(2)
-
