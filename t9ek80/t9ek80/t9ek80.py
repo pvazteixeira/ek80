@@ -59,7 +59,7 @@ class t9ek80:
         # KDI_TCP_PORT = 55035
         # USEKOGNIFAI =  0 #True
 
-        self.Status_Command = 1  
+        self.Status_Command = 1
         self.Status_Data = 2
         self.Status_NMEA = 4
         self.Status_Done = 8
@@ -84,7 +84,7 @@ class t9ek80:
         self.mode = -1
         self.cont = False
 
-        self.debug = self.getDebug();
+        self.debug = self.getDebug()
 
         # Get extra parameters...
         if len(argv) == 3:
@@ -147,6 +147,8 @@ class t9ek80:
     #----------------------------------------------------------------------------
     # Can be overide in local file...
     def getDebug(self):
+        """
+        """
         return False
 
     # Do the reporting stuff...
@@ -175,15 +177,11 @@ class t9ek80:
         logging.debug(self.EK_req)
 
         if create == True:
-            self.CreateSubscription(sock, ApplicationID, self.UDP_DATA, self.EK_req);
+            self.CreateSubscription(sock, ApplicationID, self.UDP_DATA, self.EK_req)
         else:
-            self.ChangeSubscription(sock, ApplicationID, self.UDP_DATA, self.EK_req);
+            self.ChangeSubscription(sock, ApplicationID, self.UDP_DATA, self.EK_req)
 
-    # ----------------------------------------------------------------------------
-    #    Method       GetParameterValue
-    #    Description  Get a set of parameters...
-    #-----------------------------------------------------------------------------
-    def GetParameterValue(self, sock, ApplicationID, transponder, parameter_name ):
+    def GetParameterValue(self, sock, ApplicationID, transponder, parameter_name):
         """
         Retrieve a parameter value
         """
@@ -209,16 +207,15 @@ class t9ek80:
 
         # Send the request and increase the sequence number
         request = bytes(request, encoding='utf-8')
-        sock.send(request);
+        sock.send(request)
         self.client_seq_no = self.client_seq_no + 1
 
-    # ----------------------------------------------------------------------------
-    #    Method       SetParameter
-    #    Description  Set a set of parameterrs...
-    #-----------------------------------------------------------------------------
-    def SetParameter(self, sock, ApplicationID, transponder, parameter_name, parameter_value, parameter_type ):
+    def SetParameter(self, sock, ApplicationID, transponder, parameter_name, parameter_value, parameter_type):
+        """
+        Set a parameter value
+        """
         parameter_name = parameter_name.replace("?", transponder)
-        
+
         tmp = "REQ\0{:d},1,1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".format(self.client_seq_no)
         tmp = tmp[0:26]
         tmp2 = "<request>" \
@@ -241,14 +238,13 @@ class t9ek80:
 
         # Send the request and increase the sequence number
         request = bytes(request,encoding='utf-8')
-        sock.send(request);
-        self.client_seq_no=self.client_seq_no + 1;
+        sock.send(request)
+        self.client_seq_no=self.client_seq_no + 1
 
-    #----------------------------------------------------------------------------
-    #    Method       CreateSubscription
-    #    Description  Creates a subscritopn to EK80...
-    #-----------------------------------------------------------------------------
     def CreateSubscription(self, sock, ApplicationID, port, parameter_name):
+        """
+        Create a data subscription
+        """
         tmp = "REQ\0{:d},1,1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".format(self.client_seq_no)
         tmp = tmp[0:26]
         tmp2 = "<request>" \
@@ -266,11 +262,11 @@ class t9ek80:
             "</method>" \
             "</request>\0".format(ApplicationID,self.client_seq_no,port,parameter_name)
         request = tmp + tmp2
-        
+
         # Send the request and increase the sequence number
         request = bytes(request,encoding='utf-8')
-        sock.send(request);
-        self.client_seq_no=self.client_seq_no + 1;
+        sock.send(request)
+        self.client_seq_no=self.client_seq_no + 1
 
     #----------------------------------------------------------------------------
     #    Method       ChangeSubscription
@@ -297,8 +293,8 @@ class t9ek80:
 
         # Send the request and increase the sequence number
         request = bytes(request,encoding='utf-8')
-        sock.send(request);
-        self.client_seq_no=self.client_seq_no + 1;
+        sock.send(request)
+        self.client_seq_no=self.client_seq_no + 1
 
     #----------------------------------------------------------------------------
     #    Method       EK80_comunicate
@@ -330,7 +326,7 @@ class t9ek80:
                             ApplicationID = int(data3[1].decode())
                             logging.debug("Get Param")
                             if self.debug == True:
-                                print("Get Param");
+                                print("Get Param")
                             self.GetParameterValue(sock,ApplicationID, "", "TransceiverMgr/Channels" )
 
                         else: # If failed the retry...
@@ -392,7 +388,7 @@ class t9ek80:
                     msg = 'ALI\0ClientID:{:d},SeqNo:{:d}\0'.format(ApplicationID, self.client_seq_no)
                     msg = bytes(msg, encoding='utf-8')
                     sock.send(msg)  # Send connect...
-                    logging.debug('.')
+                    # logging.debug('.')
                 elif data[:3] == b'RTR':
                     logging.debug("RTR received: {}".format(data))
                 elif data[:3] == b'REQ':
@@ -400,20 +396,18 @@ class t9ek80:
                 elif data[:3] == b'PRD':
                     logging.debug("PRD received: {}".format(data))
                 else:
-                    if self.debug == True:
-                        print("Wrong data...")
+                    logging.debug("Wrong data")
             else:
-                print("EK80 error...")
+                logging.error("EK80 error...")
 
-                
+
             try:
                 data = sock.recv(20000)
             except socket.timeout:
                 continue
-              
-        if self.debug == True:
-            print("Closing command handler...")
-            
+
+        logging.debug("Closing command handler")
+
         self.running = self.running & ~self.Status_Command
         msg = bytearray(b'DIS\0Name:Simrad;Password:\0')
         sock.send(msg)  # Send connect...
